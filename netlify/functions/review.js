@@ -25,30 +25,37 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers: cors, body: JSON.stringify({ error: 'Missing prompt' }) };
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     return { statusCode: 500, headers: cors, body: JSON.stringify({ error: 'API key not configured' }) };
   }
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-    const response = await fetch(url, {
+    const messages = [];
+    if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+    messages.push({ role: 'user', content: prompt });
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey,
+      },
       body: JSON.stringify({
-        system_instruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 4096 },
+        model: 'llama-3.3-70b-versatile',
+        messages: messages,
+        temperature: 0.2,
+        max_tokens: 4096,
       }),
     });
 
     if (!response.ok) {
       const errText = await response.text();
-      return { statusCode: response.status, headers: cors, body: JSON.stringify({ error: 'Gemini error: ' + errText }) };
+      return { statusCode: response.status, headers: cors, body: JSON.stringify({ error: 'Groq error: ' + errText }) };
     }
 
     const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const text = data.choices?.[0]?.message?.content || '';
     return { statusCode: 200, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) };
 
   } catch (err) {
