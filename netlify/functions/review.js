@@ -28,7 +28,7 @@ export async function onRequestPost(context) {
         'X-Title': 'EE Code Review Tool'
       },
       body: JSON.stringify({
-        model: 'anthropic/claude-sonnet-4.5',
+        model: 'meta-llama/llama-3.1-8b-instruct:free',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
